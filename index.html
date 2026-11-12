@@ -309,19 +309,32 @@ a.btn-wa:active { background: #178a45; }
   function construire(nom, tel, role) {
     return "Bonjour, je souhaite être prévenu(e) au lancement de Télia.\nNom : " + nom + "\nTéléphone : " + tel + "\nJe suis : " + role;
   }
-  // Un seul geste : on ouvre WhatsApp tout de suite avec le message écrit ; le bouton vert ne sert que si rien ne s'ouvre.
-  function allerSurWhatsApp(texte) {
-    var url = "https://wa.me/" + NUM + "?text=" + encodeURIComponent(texte);
+  // Ouvre l'application WhatsApp (normale OU Business) par son adresse directe ; si rien ne s'ouvre, repli sur la page web wa.me.
+  function ouvrirWhatsApp(texte) {
+    var q = encodeURIComponent(texte);
+    var appUrl = "whatsapp://send?phone=" + NUM + "&text=" + q;
+    var webUrl = "https://wa.me/" + NUM + "?text=" + q;
+    var parti = false;
+    function marque() { parti = true; }
+    document.addEventListener('visibilitychange', function() { if (document.hidden) marque(); });
+    window.addEventListener('pagehide', marque);
+    window.location.href = appUrl;
+    setTimeout(function() { if (!parti && !document.hidden) { window.location.href = webUrl; } }, 1800);
+  }
+  function allerSurWhatsApp(texte, essaiAuto) {
+    var webUrl = "https://wa.me/" + NUM + "?text=" + encodeURIComponent(texte);
     msg.className = 'msg show ok';
     msg.textContent = '';
     var bloc = document.createElement('div'); bloc.className = 'wa-bloc';
-    var titre = document.createElement('strong'); titre.textContent = 'Merci ! WhatsApp s\'ouvre : touchez « Envoyer » pour terminer.';
+    var titre = document.createElement('strong'); titre.textContent = 'Merci ! Touchez le bouton vert, puis « Envoyer » dans WhatsApp.';
     bloc.appendChild(titre);
-    var a = document.createElement('a'); a.className = 'btn-wa'; a.href = url; a.rel = 'noopener noreferrer';
-    a.textContent = 'Ouvrir WhatsApp'; bloc.appendChild(a);
+    var a = document.createElement('a'); a.className = 'btn-wa'; a.href = webUrl; a.rel = 'noopener noreferrer';
+    a.textContent = 'Ouvrir WhatsApp';
+    a.addEventListener('click', function(ev) { ev.preventDefault(); ouvrirWhatsApp(texte); });
+    bloc.appendChild(a);
     msg.appendChild(bloc);
     msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(function() { window.location.href = url; }, 150);
+    if (essaiAuto) { setTimeout(function() { ouvrirWhatsApp(texte); }, 100); }
   }
 
   form.addEventListener('submit', function(e) {
@@ -333,7 +346,7 @@ a.btn-wa:active { background: #178a45; }
     var rv = roleSelect.value;
     var role = roleLabels[rv] || rv;
     if (rv === 'autre' && roleOtherInput.value.trim()) role += ' (' + roleOtherInput.value.trim() + ')';
-    allerSurWhatsApp(construire(nom, tel, role));
+    allerSurWhatsApp(construire(nom, tel, role), true);
   });
 
   // Arrivée depuis la page de présentation (qui transmet les réponses après le « # », jamais envoyées à un serveur).
@@ -341,7 +354,7 @@ a.btn-wa:active { background: #178a45; }
     var h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     if (h.get('n') && h.get('t') && h.get('r')) {
       history.replaceState(null, '', window.location.pathname);
-      allerSurWhatsApp(construire(h.get('n'), h.get('t'), h.get('r')));
+      allerSurWhatsApp(construire(h.get('n'), h.get('t'), h.get('r')), false);
     }
   } catch (e) {}
 
