@@ -309,6 +309,24 @@ a.btn-wa:active { background: #178a45; }
   function construire(nom, tel, role) {
     return "Bonjour, je souhaite être prévenu(e) au lancement de Télia.\nNom : " + nom + "\nTéléphone : " + tel + "\nJe suis : " + role;
   }
+  // Petit navigateur intégré (WhatsApp, Facebook, Instagram…) : il ne peut pas ouvrir l'application WhatsApp.
+  // On le détecte et on guide vers « Ouvrir dans le navigateur » AVANT le formulaire.
+  var ua = navigator.userAgent || '';
+  var dansAppli = /; wv\)/.test(ua) || /WhatsApp|FBAN|FBAV|Instagram|Line\/|Snapchat|TikTok/i.test(ua) || (/iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua));
+  var mobile = /Android|iPhone|iPad|iPod/i.test(ua);
+  function montrerGuide() {
+    if (document.getElementById('guide-nav')) return;
+    var g = document.createElement('div'); g.id = 'guide-nav';
+    g.style.cssText = 'background:#FFD23F;color:#1c1300;border-radius:16px;padding:16px 18px;margin:12px 0;font-size:17px;line-height:1.45;font-weight:700;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.18)';
+    g.innerHTML = '';
+    var l1 = document.createElement('div'); l1.textContent = '1. Touchez les 3 points ⋮ en haut à droite'; g.appendChild(l1);
+    var l2 = document.createElement('div'); l2.textContent = '2. Touchez « Ouvrir dans le navigateur »'; g.appendChild(l2);
+    var l3 = document.createElement('div'); l3.style.cssText = 'font-weight:400;font-size:14px;margin-top:6px'; l3.textContent = 'Sans cela, WhatsApp ne peut pas s\'ouvrir depuis cette page.'; g.appendChild(l3);
+    var w = document.querySelector('.wrap'); if (w) w.insertBefore(g, w.firstChild);
+    window.scrollTo(0, 0);
+  }
+  if (dansAppli) { montrerGuide(); }
+
   // Ouvre l'application WhatsApp (normale OU Business) par son adresse directe ; si rien ne s'ouvre, repli sur la page web wa.me.
   function ouvrirWhatsApp(texte) {
     var q = encodeURIComponent(texte);
@@ -319,7 +337,7 @@ a.btn-wa:active { background: #178a45; }
     document.addEventListener('visibilitychange', function() { if (document.hidden) marque(); });
     window.addEventListener('pagehide', marque);
     window.location.href = appUrl;
-    setTimeout(function() { if (!parti && !document.hidden) { window.location.href = webUrl; } }, 1800);
+    setTimeout(function() { if (!parti && !document.hidden) { if (mobile) { montrerGuide(); } else { window.location.href = webUrl; } } }, 1800);
   }
   function allerSurWhatsApp(texte, essaiAuto) {
     var webUrl = "https://wa.me/" + NUM + "?text=" + encodeURIComponent(texte);
