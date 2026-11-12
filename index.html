@@ -306,6 +306,24 @@ a.btn-wa:active { background: #178a45; }
     try { navigator.clipboard.writeText(texte).then(fait).catch(secours); } catch (e) { secours(); }
   }
 
+  function construire(nom, tel, role) {
+    return "Bonjour, je souhaite être prévenu(e) au lancement de Télia.\nNom : " + nom + "\nTéléphone : " + tel + "\nJe suis : " + role;
+  }
+  // Un seul geste : on ouvre WhatsApp tout de suite avec le message écrit ; le bouton vert ne sert que si rien ne s'ouvre.
+  function allerSurWhatsApp(texte) {
+    var url = "https://wa.me/" + NUM + "?text=" + encodeURIComponent(texte);
+    msg.className = 'msg show ok';
+    msg.textContent = '';
+    var bloc = document.createElement('div'); bloc.className = 'wa-bloc';
+    var titre = document.createElement('strong'); titre.textContent = 'Merci ! WhatsApp s\'ouvre : touchez « Envoyer » pour terminer.';
+    bloc.appendChild(titre);
+    var a = document.createElement('a'); a.className = 'btn-wa'; a.href = url; a.rel = 'noopener noreferrer';
+    a.textContent = 'Ouvrir WhatsApp'; bloc.appendChild(a);
+    msg.appendChild(bloc);
+    msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function() { window.location.href = url; }, 150);
+  }
+
   form.addEventListener('submit', function(e) {
     e.preventDefault();
     var civEl = form.querySelector('input[name="civility"]:checked');
@@ -315,37 +333,17 @@ a.btn-wa:active { background: #178a45; }
     var rv = roleSelect.value;
     var role = roleLabels[rv] || rv;
     if (rv === 'autre' && roleOtherInput.value.trim()) role += ' (' + roleOtherInput.value.trim() + ')';
-    var texte = "Bonjour, je souhaite être prévenu(e) au lancement de Télia.\nNom : " + nom + "\nTéléphone : " + tel + "\nJe suis : " + role;
-    var url = "https://wa.me/" + NUM + "?text=" + encodeURIComponent(texte);
-
-    msg.className = 'msg show ok';
-    msg.textContent = '';
-    var bloc = document.createElement('div'); bloc.className = 'wa-bloc';
-    var titre = document.createElement('strong'); titre.textContent = 'Merci ! Dernière étape : envoyez votre message sur WhatsApp.';
-    bloc.appendChild(titre);
-
-    if (!dansUnCadre) {
-      // Page ouverte en grand : un vrai lien, une seule touche, le message est déjà écrit.
-      var a = document.createElement('a'); a.className = 'btn-wa'; a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-      a.textContent = 'Ouvrir WhatsApp et envoyer'; bloc.appendChild(a);
-      var p = document.createElement('p'); p.className = 'etape'; p.textContent = 'WhatsApp s\'ouvre avec votre message déjà écrit : touchez simplement « Envoyer ».'; bloc.appendChild(p);
-    } else {
-      // Page encadrée : on ne tente PAS d'ouvrir WhatsApp (ce serait bloqué) ; on donne le message à copier.
-      var p0 = document.createElement('p'); p0.className = 'etape'; p0.textContent = '1. Touchez « Copier mon message ».'; bloc.appendChild(p0);
-    }
-
-    var ap = document.createElement('div'); ap.id = 'apercu'; ap.className = 'apercu'; ap.textContent = texte; bloc.appendChild(ap);
-    var bc = document.createElement('button'); bc.type = 'button'; bc.className = 'btn-sec'; bc.textContent = 'Copier mon message';
-    bc.addEventListener('click', function() { copier(texte, bc); }); bloc.appendChild(bc);
-
-    var p2 = document.createElement('p'); p2.className = 'etape';
-    p2.appendChild(document.createTextNode(dansUnCadre ? '2. Ouvrez WhatsApp, écrivez au ' : 'Si WhatsApp ne s\'ouvre pas : copiez le message, ouvrez WhatsApp et écrivez au '));
-    var n = document.createElement('span'); n.className = 'num-wa'; n.textContent = NUM_AFFICHE; p2.appendChild(n);
-    p2.appendChild(document.createTextNode(dansUnCadre ? ', puis collez le message et envoyez.' : ', puis collez le message.'));
-    bloc.appendChild(p2);
-    msg.appendChild(bloc);
-    msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    allerSurWhatsApp(construire(nom, tel, role));
   });
+
+  // Arrivée depuis la page de présentation (qui transmet les réponses après le « # », jamais envoyées à un serveur).
+  try {
+    var h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    if (h.get('n') && h.get('t') && h.get('r')) {
+      history.replaceState(null, '', window.location.pathname);
+      allerSurWhatsApp(construire(h.get('n'), h.get('t'), h.get('r')));
+    }
+  } catch (e) {}
 
   var cb = document.getElementById('copyBtn');
   if (cb) cb.addEventListener('click', function() {
